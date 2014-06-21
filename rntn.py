@@ -1,9 +1,10 @@
 import numpy as np
 import collections
+import pdb
 
 class RNN:
 
-    def __init__(self,wvecDim,outputDim,numWords,mbSize=30,rho=1e-4):
+    def __init__(self,wvecDim,outputDim,numWords,mbSize=30,rho=1e-6):
         self.wvecDim = wvecDim
         self.outputDim = outputDim
         self.numWords = numWords
@@ -17,6 +18,7 @@ class RNN:
         self.L = 0.01*np.random.randn(self.wvecDim,self.numWords)
 
         # Hidden activation weights
+        self.V = 0.01*np.random.randn(self.wvecDim,2*self.wvecDim,2*self.wvecDim)
         self.W = 0.01*np.random.randn(self.wvecDim,2*self.wvecDim)
         self.b = np.zeros((self.wvecDim))
 
@@ -24,9 +26,10 @@ class RNN:
         self.Ws = 0.01*np.random.randn(self.outputDim,self.wvecDim)
         self.bs = np.zeros((self.outputDim))
 
-        self.stack = [self.L, self.W, self.b, self.Ws, self.bs]
+        self.stack = [self.L, self.V, self.W, self.b, self.Ws, self.bs]
 
         # Gradients
+        self.dV = np.empty((self.wvecDim,2*self.wvecDim,2*self.wvecDim))
         self.dW = np.empty(self.W.shape)
         self.db = np.empty((self.wvecDim))
         self.dWs = np.empty(self.Ws.shape)
@@ -46,8 +49,9 @@ class RNN:
         correct = 0.0
         total = 0.0
 
-        self.L,self.W,self.b,self.Ws,self.bs = self.stack
+        self.L,self.V,self.W,self.b,self.Ws,self.bs = self.stack
         # Zero gradients
+        self.dV[:] = 0
         self.dW[:] = 0
         self.db[:] = 0
         self.dWs[:] = 0
@@ -73,10 +77,12 @@ class RNN:
             v *=scale
         
         # Add L2 Regularization 
+        cost += (self.rho/2)*np.sum(self.V**2)
         cost += (self.rho/2)*np.sum(self.W**2)
         cost += (self.rho/2)*np.sum(self.Ws**2)
 
-        return scale*cost,[self.dL,scale*(self.dW + self.rho*self.W),scale*self.db,
+        return scale*cost,[self.dL,scale*(self.dV+self.rho*self.V),
+                           scale*(self.dW + self.rho*self.W),scale*self.db,
                            scale*(self.dWs+self.rho*self.Ws),scale*self.dbs]
 
     def forwardProp(self,node):
@@ -98,8 +104,9 @@ class RNN:
                 correct += corr
                 total += tot
             # Affine
-            node.hActs = np.dot(self.W,
-                    np.hstack([node.left.hActs, node.right.hActs])) + self.b
+            lr = np.hstack([node.left.hActs, node.right.hActs])
+            node.hActs = np.dot(self.W,lr) + self.b
+            node.hActs += np.tensordot(self.V,np.outer(lr,lr),axes=([1,2],[0,1]))
             # Relu
             node.hActs[node.hActs<0] = 0
 
@@ -138,11 +145,14 @@ class RNN:
 
         # Hidden grad
         if not node.isLeaf:
-            self.dW += np.outer(deltas,
-                    np.hstack([node.left.hActs, node.right.hActs]))
+            lr = np.hstack([node.left.hActs, node.right.hActs])
+            outer = np.outer(deltas,lr)
+            self.dV += (np.outer(lr,lr)[...,None]*deltas).T
+            self.dW += outer
             self.db += deltas
             # Error signal to children
             deltas = np.dot(self.W.T, deltas) 
+            deltas += 2*np.tensordot(self.V,outer.T,axes=([1,0],[0,1]))
             self.backProp(node.left, deltas[:self.wvecDim])
             self.backProp(node.right, deltas[self.wvecDim:])
 
@@ -180,16 +190,17 @@ class RNN:
         cost, grad = self.costAndGrad(data)
 
         for W,dW in zip(self.stack[1:],grad[1:]):
-            W = W[...,None] # add dimension since bias is flat
-            dW = dW[...,None] 
+            W = W[...,None,None] # add dimension since bias is flat
+            dW = dW[...,None,None] 
             for i in xrange(W.shape[0]):
                 for j in xrange(W.shape[1]):
-                    W[i,j] += epsilon
-                    costP,_ = self.costAndGrad(data)
-                    W[i,j] -= epsilon
-                    numGrad = (costP - cost)/epsilon
-                    err = np.abs(dW[i,j] - numGrad)
-                    print "Analytic %.9f, Numerical %.9f, Relative Error %.9f"%(dW[i,j],numGrad,err)
+                    for k in xrange(W.shape[2]):
+                        W[i,j,k] += epsilon
+                        costP,_ = self.costAndGrad(data)
+                        W[i,j,k] -= epsilon
+                        numGrad = (costP - cost)/epsilon
+                        err = np.abs(dW[i,j,k] - numGrad)
+                        print "Analytic %.9f, Numerical %.9f, Relative Error %.9f"%(dW[i,j,k],numGrad,err)
 
         # check dL separately since dict
         dL = grad[0]
@@ -213,13 +224,14 @@ if __name__ == '__main__':
     wvecDim = 10
     outputDim = 5
 
-    rnn = RNN(wvecDim,outputDim,numW,mbSize=4)
-    rnn.initParams()
+    rntn = RNN(wvecDim,outputDim,numW,mbSize=4)
+    rntn.initParams()
 
-    mbData = train[:4]
-    
+    mbData = train[:1]
+    #cost, grad = rntn.costAndGrad(mbData)
+
     print "Numerical gradient check..."
-    rnn.check_grad(mbData)
+    rntn.check_grad(mbData)
 
 
 

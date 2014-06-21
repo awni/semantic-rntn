@@ -42,7 +42,7 @@ class Tree:
             split += 1
 
         # New node
-        node = Node(int(tokens[1]))
+        node = Node(int(tokens[1])-1) # zero index labels
         node.parent = parent 
 
         # leaf Node
@@ -75,11 +75,14 @@ def countWords(node,words):
 
 def mapWords(node,wordMap):
     if node.isLeaf:
-        node.word = wordMap[node.word]
+        if node.word not in wordMap:
+            node.word = wordMap[UNK]
+        else:
+            node.word = wordMap[node.word]
 
 def loadWordMap():
     import cPickle as pickle
-    with open('wordMap.bin','w') as fid:
+    with open('wordMap.bin','r') as fid:
         return pickle.load(fid)
 
 def buildWordMap():
@@ -103,7 +106,23 @@ def buildWordMap():
 
     with open('wordMap.bin','w') as fid:
         pickle.dump(wordMap,fid)
-       
+
+def loadTrees(dataSet='train'):
+    """
+    Loads training trees. Maps leaf node words to word ids.
+    """
+    wordMap = loadWordMap()
+    file = 'trees/%s.txt'%dataSet
+    print "Reading trees.."
+    with open(file,'r') as fid:
+        trees = [Tree(l) for l in fid.readlines()]
+    for tree in trees:
+        leftTraverse(tree.root,nodeFn=mapWords,args=wordMap)
+    return trees
+      
 if __name__=='__main__':
-   #buildWordMap()
+    buildWordMap()
+    train = loadTrees()
+
+
 
