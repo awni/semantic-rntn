@@ -1,10 +1,12 @@
 import numpy as np
+import numpy.linalg as nl
 import collections
 import pdb
+np.seterr(over='raise',under='raise')
 
 class RNN:
 
-    def __init__(self,wvecDim,outputDim,numWords,mbSize=30,rho=1e-6):
+    def __init__(self,wvecDim,outputDim,numWords,mbSize=30,rho=1e-4):
         self.wvecDim = wvecDim
         self.outputDim = outputDim
         self.numWords = numWords
@@ -19,7 +21,7 @@ class RNN:
 
         # Hidden activation weights
         self.V = 0.01*np.random.randn(self.wvecDim,2*self.wvecDim,2*self.wvecDim)
-        self.W = 0.01*np.random.randn(self.wvecDim,2*self.wvecDim)
+        self.W = 0.01*np.random.randn(self.wvecDim,self.wvecDim*2)
         self.b = np.zeros((self.wvecDim))
 
         # Softmax weights
@@ -59,7 +61,7 @@ class RNN:
         self.dL = collections.defaultdict(self.defaultVec)
 
         # Forward prop each tree in minibatch
-        for tree in mbdata: 
+        for tree in mbdata:
             c,corr,tot = self.forwardProp(tree.root)
             cost += c
             correct += corr
@@ -107,8 +109,8 @@ class RNN:
             lr = np.hstack([node.left.hActs, node.right.hActs])
             node.hActs = np.dot(self.W,lr) + self.b
             node.hActs += np.tensordot(self.V,np.outer(lr,lr),axes=([1,2],[0,1]))
-            # Relu
-            node.hActs[node.hActs<0] = 0
+            # Tanh
+            node.hActs = np.tanh(node.hActs)
 
         # Softmax
         node.probs = np.dot(self.Ws,node.hActs) + self.bs
@@ -136,7 +138,7 @@ class RNN:
         if error is not None:
             deltas += error
 
-        deltas *= (node.hActs != 0)
+        deltas *= (1-node.hActs**2)
 
         # Leaf nodes update word vecs
         if node.isLeaf:
