@@ -17,7 +17,8 @@ class SGD:
 	    print "Using sgd.."
         elif self.optimizer == 'adagrad':
             print "Using adagrad..."
-	    self.gradt = [np.zeros(W.shape) for W in self.model.stack]
+            epsilon = 1e-8
+	    self.gradt = [epsilon + np.zeros(W.shape) for W in self.model.stack]
 	else:
 	    raise ValueError("Invalid optimizer")
 
@@ -53,9 +54,8 @@ class SGD:
 		scale = -self.alpha
 
 	    elif self.optimizer == 'adagrad':
-		epsilon = 1e-8
 		# trace = trace+grad.^2
-                self.gradt[1:] = [gt+g**2+epsilon 
+                self.gradt[1:] = [gt+g**2 
                         for gt,g in zip(self.gradt[1:],grad[1:])]
 		# update = grad.*trace.^(-1/2)
 		update =  [g*(1./np.sqrt(gt))
@@ -64,7 +64,7 @@ class SGD:
                 dL = grad[0]
                 dLt = self.gradt[0]
                 for j in dL.iterkeys():
-                    dLt[:,j] += (dL[j]**2 + epsilon)
+                    dLt[:,j] = dLt[:,j] + dL[j]**2
                     dL[j] = dL[j] * (1./np.sqrt(dLt[:,j]))
                 update = [dL] + update
 		scale = -self.alpha

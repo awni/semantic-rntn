@@ -6,7 +6,7 @@ np.seterr(over='raise',under='raise')
 
 class RNN:
 
-    def __init__(self,wvecDim,outputDim,numWords,mbSize=30,rho=1e-4):
+    def __init__(self,wvecDim,outputDim,numWords,mbSize=30,rho=1e-6):
         self.wvecDim = wvecDim
         self.outputDim = outputDim
         self.numWords = numWords
