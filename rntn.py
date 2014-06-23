@@ -1,5 +1,4 @@
 import numpy as np
-import numpy.linalg as nl
 import collections
 import pdb
 np.seterr(over='raise',under='raise')
@@ -154,7 +153,8 @@ class RNN:
             self.db += deltas
             # Error signal to children
             deltas = np.dot(self.W.T, deltas) 
-            deltas += 2*np.tensordot(self.V,outer.T,axes=([1,0],[0,1]))
+            deltas += np.tensordot(self.V.transpose((0,2,1))+self.V,
+                                   outer.T,axes=([1,0],[0,1]))
             self.backProp(node.left, deltas[:self.wvecDim])
             self.backProp(node.right, deltas[self.wvecDim:])
 
