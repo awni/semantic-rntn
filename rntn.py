@@ -1,6 +1,5 @@
 import numpy as np
 import collections
-import pdb
 np.seterr(over='raise',under='raise')
 
 class RNN:
@@ -168,9 +167,9 @@ class RNN:
         """
         if log:
             for P,dP in zip(self.stack[1:],update[1:]):
-		pRMS = np.sqrt(np.mean(P**2))
-		dpRMS = np.sqrt(np.mean((scale*dP)**2))
-		print "weight rms=%f -- update rms=%f"%(pRMS,dpRMS)
+                pRMS = np.sqrt(np.mean(P**2))
+                dpRMS = np.sqrt(np.mean((scale*dP)**2))
+                print "weight rms=%f -- update rms=%f"%(pRMS,dpRMS)
 
         self.stack[1:] = [P+scale*dP for P,dP in zip(self.stack[1:],update[1:])]
 

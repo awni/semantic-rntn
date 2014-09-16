@@ -1,12 +1,10 @@
 import optparse
-import numpy as np
 import cPickle as pickle
 
 import sgd as optimizer
 import rntn as nnet
 import tree as tr
 import time
-import pdb
 
 def run(args=None):
     usage = "usage : %prog [options]"
@@ -17,16 +15,16 @@ def run(args=None):
     # Optimizer
     parser.add_option("--minibatch",dest="minibatch",type="int",default=30)
     parser.add_option("--optimizer",dest="optimizer",type="string",
-	    default="adagrad")
+        default="adagrad")
     parser.add_option("--epochs",dest="epochs",type="int",default=50)
     parser.add_option("--step",dest="step",type="float",default=1e-2)
 
     parser.add_option("--outputDim",dest="outputDim",type="int",default=5)
     parser.add_option("--wvecDim",dest="wvecDim",type="int",default=30)
     parser.add_option("--outFile",dest="outFile",type="string",
-	    default="models/test.bin")
+        default="models/test.bin")
     parser.add_option("--inFile",dest="inFile",type="string",
-	    default="models/test.bin")
+        default="models/test.bin")
     parser.add_option("--data",dest="data",type="string",default="train")
 
 
@@ -34,9 +32,9 @@ def run(args=None):
 
     # Testing
     if opts.test:
-	test(opts.inFile,opts.data)
-	return
-	
+        test(opts.inFile,opts.data)
+        return
+    
     print "Loading data..."
     # load training data
     trees = tr.loadTrees()
@@ -46,12 +44,12 @@ def run(args=None):
     rnn.initParams()
 
     sgd = optimizer.SGD(rnn,alpha=opts.step,minibatch=opts.minibatch,
-	    optimizer=opts.optimizer)
+        optimizer=opts.optimizer)
 
     for e in range(opts.epochs):
         start = time.time()
-    	print "Running epoch %d"%e
-    	sgd.run(trees)
+        print "Running epoch %d"%e
+        sgd.run(trees)
         end = time.time()
         print "Time per epoch : %f"%(end-start)
 
