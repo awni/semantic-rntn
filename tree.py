@@ -102,7 +102,7 @@ def buildWordMap():
         leftTraverse(tree.root,nodeFn=countWords,args=words)
     
     wordMap = dict(zip(words.iterkeys(),xrange(len(words))))
-    wordMap[UNK] = len(words) # Add unkown as word
+    wordMap[UNK] = len(words) # Add unknown as word
 
     with open('wordMap.bin','w') as fid:
         pickle.dump(wordMap,fid)
